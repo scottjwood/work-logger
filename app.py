@@ -3,74 +3,32 @@ import pandas as pd
 from datetime import datetime, time
 from database import get_data, update_data
 from logic import calculate_billable_hours
-from st_google_auth import GoogleAuth
+from streamlit_google_oauth import login
 
-# Initialize Google Auth
-# The credentials will be pulled from your Streamlit Secrets automatically
-oa = GoogleAuth(
+# 1. MUST be the first Streamlit command
+st.set_page_config(page_title="Work Logger Pro", layout="wide")
+
+# 2. Handle Google Login
+login_info = login(
     client_id=st.secrets["G_CLIENT_ID"],
     client_secret=st.secrets["G_CLIENT_SECRET"],
     redirect_uri=st.secrets["G_REDIRECT_URI"],
+    login_button_text="Login with Google Workspace",
 )
 
-# This handles the login screen
-user_info = oa.login()
-
-if not user_info:
-    st.warning("Please sign in with your Google Workspace account to continue.")
+if login_info is None:
+    st.title("🔒 Restricted Access")
+    st.warning("Please login with your @thewooddesign.com account to continue.")
     st.stop()
 
-# Optional: Extra security check to ensure it's YOUR email specifically
-if user_info.get("email") != "your-email@thewooddesign.com":
-    st.error("Access Denied: Unauthorized User.")
+# 3. Extract User Info & Verify Domain
+user_email, user_name, user_id = login_info
+
+if not user_email.endswith("@thewooddesign.com"):
+    st.error(f"Unauthorized: {user_email} does not have access.")
     st.stop()
 
-# --- IF WE GET HERE, THE USER IS LOGGED IN ---
-st.sidebar.write(f"Logged in as: {user_info.get('name')}")
-if st.sidebar.button("Logout"):
-    oa.logout()
-    st.rerun()
-
-# ... REST OF YOUR EXISTING APP CODE ...
-# --- SIMPLE LOGIN SECURITY ---
-def check_password():
-    """Returns True if the user had the correct password."""
-
-    def password_entered():
-        """Checks whether a password entered by the user is correct."""
-        if st.session_state["password"] == st.secrets["app_password"]:
-            st.session_state["password_correct"] = True
-            del st.session_state["password"]  # don't store password
-        else:
-            st.session_state["password_correct"] = False
-
-    if "password_correct" not in st.session_state:
-        # First run, show input for password.
-        st.text_input(
-            "Enter Password to Access Tracker", 
-            type="password", 
-            on_change=password_entered, 
-            key="password"
-        )
-        return False
-    elif not st.session_state["password_correct"]:
-        # Password not correct, show input + error.
-        st.text_input(
-            "Enter Password to Access Tracker", 
-            type="password", 
-            on_change=password_entered, 
-            key="password"
-        )
-        st.error("😕 Password incorrect")
-        return False
-    else:
-        # Password correct.
-        return True
-
-if not check_password():
-    st.stop()  # Do not run the rest of the app if not logged in
-
-st.set_page_config(page_title="Work Logger Pro", layout="wide")
+# --- IF WE GET HERE, THE USER IS AUTHENTICATED ---
 
 # Fetch both sheets
 df_entries = get_data("entries")
@@ -78,14 +36,12 @@ df_clients = get_data("clients")
 
 # --- SIDEBAR: INPUT ---
 with st.sidebar:
+    st.success(f"Hello, {user_name}!")
     st.header("Add New Entry")
     
-    # Dropdown for clients
     if not df_clients.empty:
         client_list = df_clients['client_name'].tolist()
         selected_client = st.selectbox("Select Client", client_list)
-        
-        # Automatically find the rate for the selected client
         client_info = df_clients[df_clients['client_name'] == selected_client].iloc[0]
         current_rate = client_info['hourly_rate']
         st.info(f"Rate: ${current_rate}/hr")
@@ -129,81 +85,57 @@ with tab_manage:
 with tab_report:
     st.header("Monthly Reporting")
     if not df_entries.empty:
-        # Filter for only Pending items
         pending_df = df_entries[df_entries['status'] == 'Pending']
-        
         if not pending_df.empty:
             clients_in_pending = pending_df['client_name'].unique()
             selected_report_client = st.selectbox("Select Client for Report", [""] + list(clients_in_pending))
-
             if selected_report_client:
                 report_df = pending_df[pending_df['client_name'] == selected_report_client].copy()
-                
-                # Use the logic from our logic.py file
                 report_df['hrs'] = report_df.apply(
                     lambda x: calculate_billable_hours(x['start_time'], x['end_time'], x['lunch_mins']), 
                     axis=1
                 )
-                
                 total_hrs = report_df['hrs'].sum()
-                # Get rate from the entry (which was saved from the client list)
                 current_rate = report_df['billing_rate'].iloc[0]
                 total_cash = total_hrs * current_rate
-
                 c1, c2 = st.columns(2)
                 c1.metric("Total Hours", f"{total_hrs} hrs")
                 c2.metric("Total Billable", f"${total_cash:,.2f}")
-
-                # Format description for Wave
                 invoice_text = f"INVOICE SUMMARY: {selected_report_client}\n" + "-"*30 + "\n"
                 for _, row in report_df.iterrows():
                     invoice_text += f"{row['date']} | {row['start_time']}-{row['end_time']} | {row['notes']}\n"
-                
                 st.text_area("Wave Description (Copy/Paste)", value=invoice_text, height=200)
-                
                 if st.button("Mark All as Invoiced"):
-                    # Update status for these specific entries
                     df_entries.loc[df_entries['client_name'] == selected_report_client, 'status'] = 'Invoiced'
                     update_data(df_entries, "entries")
-                    st.success(f"Updated {selected_report_client} entries to 'Invoiced'!")
+                    st.success(f"Updated {selected_report_client} entries!")
                     st.rerun()
         else:
-            st.info("No 'Pending' entries found. Everything is currently invoiced!")
+            st.info("No 'Pending' entries found.")
     else:
-        st.warning("No entries found in the database.")
+        st.warning("No entries found.")
 
 with tab_clients:
-    # THIS IS WHERE YOU PASTE THE NEW CODE
     st.header("Client Settings")
-    
-    # --- ADD NEW CLIENT FORM ---
     with st.expander("➕ Add New Client"):
         with st.form("new_client_form", clear_on_submit=True):
             new_name = st.text_input("Client Name")
             new_rate = st.number_input("Default Hourly Rate", min_value=0.0, value=50.0, step=5.0)
             submit_client = st.form_submit_button("Add Client")
-            
             if submit_client and new_name:
-                # Add to existing df_clients
                 new_c_row = pd.DataFrame([{"client_name": new_name, "hourly_rate": new_rate}])
                 df_clients = pd.concat([df_clients, new_c_row], ignore_index=True)
                 update_data(df_clients, "clients")
                 st.success(f"Added {new_name}!")
                 st.rerun()
-
     st.divider()
-    
-    # --- EDIT/DELETE CLIENTS ---
     st.subheader("Existing Clients")
     edited_clients = st.data_editor(
         df_clients, 
         num_rows="dynamic", 
         use_container_width=True,
-        column_config={
-            "hourly_rate": st.column_config.NumberColumn(format="$%.2f")
-        }
+        column_config={"hourly_rate": st.column_config.NumberColumn(format="$%.2f")}
     )
-    
     if st.button("Save Changes to Client List"):
         update_data(edited_clients, "clients")
         st.success("Changes saved!")
