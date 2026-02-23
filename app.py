@@ -3,6 +3,72 @@ import pandas as pd
 from datetime import datetime, time
 from database import get_data, update_data
 from logic import calculate_billable_hours
+from st_google_auth import GoogleAuth
+
+# Initialize Google Auth
+# The credentials will be pulled from your Streamlit Secrets automatically
+oa = GoogleAuth(
+    client_id=st.secrets["G_CLIENT_ID"],
+    client_secret=st.secrets["G_CLIENT_SECRET"],
+    redirect_uri=st.secrets["G_REDIRECT_URI"],
+)
+
+# This handles the login screen
+user_info = oa.login()
+
+if not user_info:
+    st.warning("Please sign in with your Google Workspace account to continue.")
+    st.stop()
+
+# Optional: Extra security check to ensure it's YOUR email specifically
+if user_info.get("email") != "your-email@thewooddesign.com":
+    st.error("Access Denied: Unauthorized User.")
+    st.stop()
+
+# --- IF WE GET HERE, THE USER IS LOGGED IN ---
+st.sidebar.write(f"Logged in as: {user_info.get('name')}")
+if st.sidebar.button("Logout"):
+    oa.logout()
+    st.rerun()
+
+# ... REST OF YOUR EXISTING APP CODE ...
+# --- SIMPLE LOGIN SECURITY ---
+def check_password():
+    """Returns True if the user had the correct password."""
+
+    def password_entered():
+        """Checks whether a password entered by the user is correct."""
+        if st.session_state["password"] == st.secrets["app_password"]:
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]  # don't store password
+        else:
+            st.session_state["password_correct"] = False
+
+    if "password_correct" not in st.session_state:
+        # First run, show input for password.
+        st.text_input(
+            "Enter Password to Access Tracker", 
+            type="password", 
+            on_change=password_entered, 
+            key="password"
+        )
+        return False
+    elif not st.session_state["password_correct"]:
+        # Password not correct, show input + error.
+        st.text_input(
+            "Enter Password to Access Tracker", 
+            type="password", 
+            on_change=password_entered, 
+            key="password"
+        )
+        st.error("😕 Password incorrect")
+        return False
+    else:
+        # Password correct.
+        return True
+
+if not check_password():
+    st.stop()  # Do not run the rest of the app if not logged in
 
 st.set_page_config(page_title="Work Logger Pro", layout="wide")
 
