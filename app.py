@@ -8,24 +8,31 @@ import streamlit_authenticator as stauth
 # 1. MUST be the first Streamlit command
 st.set_page_config(page_title="Work Logger Pro", layout="wide")
 
-# --- SIMPLE SECURE LOGIN ---
-# --- TEMPORARY BYPASS LOGIN ---
-st.sidebar.title("Login")
-user = st.sidebar.text_input("Username")
-pw = st.sidebar.text_input("Password", type="password")
+# --- SIMPLE LOGIN SECTION ---
+st.sidebar.title("🔐 Access Control")
 
-# We check against the secret you already have in your dashboard
-# Use the plain text '9900' in your secrets for this test
-if user == "admin" and pw == "9900":
+# 1. Create text inputs in the sidebar
+user_input = st.sidebar.text_input("Username")
+pw_input = st.sidebar.text_input("Password", type="password")
+
+# 2. Check credentials (using '9900' as plain text in your Secrets)
+if user_input == "admin" and pw_input == st.secrets["password"]:
     st.sidebar.success("Logged In!")
+    # Define 'name' here so the app can use it later
+    name = "Admin" 
 else:
-    if user or pw:
-        st.sidebar.error("Incorrect credentials")
+    # If they haven't typed anything yet, show a friendly warning
+    if not user_input or not pw_input:
+        st.warning("Please enter your credentials in the sidebar to unlock the tracker.")
+    else:
+        # If they typed the wrong thing, show an error
+        st.sidebar.error("Incorrect Username or Password")
+    
+    # This stops the app from running the rest of the code until login is correct
     st.stop()
 
-# --- IF WE GET HERE, THE USER IS LOGGED IN ---
-st.sidebar.success(f"Welcome, {name}")
-authenticator.logout(location="sidebar")
+# --- IF WE GET HERE, THE USER IS AUTHENTICATED ---
+st.sidebar.write(f"Welcome back, {name}!")
 
 # Fetch both sheets
 df_entries = get_data("entries")
