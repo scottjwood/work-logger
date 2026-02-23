@@ -155,7 +155,7 @@ with tab_report:
                 st.text_area("Wave Description (Copy/Paste)", value=invoice_text, height=250)
                 st.link_button("Go to Wave Invoices ↗️", "https://next.waveapps.com/e9bfc2ca-dac3-48a0-83b0-d66a9fadc43a/invoices")
 
-                if st.button("Mark All as Invoiced", use_container_width=True):
+                if st.button("Mark All as Invoiced"):
                     today_str = datetime.now().strftime("%m-%d-%Y") # CONSISTENT FORMAT
                     mask = (df_entries['client_name'] == selected_report_client) & (df_entries['status'] == 'Pending')
                     df_entries.loc[mask, 'invoiced_date'] = today_str
