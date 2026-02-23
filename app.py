@@ -3,32 +3,37 @@ import pandas as pd
 from datetime import datetime, time
 from database import get_data, update_data
 from logic import calculate_billable_hours
-from st_google_oauth import login
+import streamlit_authenticator as stauth
 
 # 1. MUST be the first Streamlit command
 st.set_page_config(page_title="Work Logger Pro", layout="wide")
 
-# 2. Handle Google Login
-login_info = login(
-    client_id=st.secrets["G_CLIENT_ID"],
-    client_secret=st.secrets["G_CLIENT_SECRET"],
-    redirect_uri=st.secrets["G_REDIRECT_URI"],
-    login_button_text="Login with Google Workspace",
+# --- SIMPLE SECURE LOGIN ---
+# This uses names and passwords you set in your Streamlit Secrets
+names = ["Admin"]
+usernames = ["admin"]
+# You'll put the hashed password in your secrets
+passwords = [st.secrets["password"]] 
+
+authenticator = stauth.Authenticate(
+    {"usernames": {usernames[0]: {"name": names[0], "password": passwords[0]}}},
+    "work_logger_cookie",
+    "signature_key",
+    cookie_expiry_days=30
 )
 
-if login_info is None:
-    st.title("🔒 Restricted Access")
-    st.warning("Please login with your @thewooddesign.com account to continue.")
+name, authentication_status, username = authenticator.login("main")
+
+if authentication_status == False:
+    st.error("Username/password is incorrect")
+    st.stop()
+elif authentication_status == None:
+    st.warning("Please enter your username and password")
     st.stop()
 
-# 3. Extract User Info & Verify Domain
-user_email, user_name, user_id = login_info
-
-if not user_email.endswith("@thewooddesign.com"):
-    st.error(f"Unauthorized: {user_email} does not have access.")
-    st.stop()
-
-# --- IF WE GET HERE, THE USER IS AUTHENTICATED ---
+# --- IF WE GET HERE, THE USER IS LOGGED IN ---
+st.sidebar.success(f"Welcome, {name}")
+authenticator.logout("Logout", "sidebar")
 
 # Fetch both sheets
 df_entries = get_data("entries")
