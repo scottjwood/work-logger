@@ -155,7 +155,10 @@ with tab_report:
                 for _, row in report_df.iterrows():
                     # Calculate hours for each specific row for detail
                     row_hrs = calculate_billable_hours(row['start_time'], row['end_time'], row['lunch_mins'])
-                    invoice_text += f"{row['date']} | {row_hrs} hrs | {row['notes']}\n"
+                    # 2. Clean up the note (if it's empty/NaN, make it an empty string)
+                    # This check handles both 'nan' strings and actual null values
+                    note_content = str(row['notes']) if pd.notnull(row['notes']) else ""
+                    invoice_text += f"{row['date']} | {row_hrs} hrs | {row['note_content']}\n"
                 
                 invoice_text += "-"*30 + "\n"
                 invoice_text += f"GRAND TOTAL: {total_hrs} hrs"
