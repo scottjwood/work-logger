@@ -105,3 +105,40 @@ with tab_report:
             st.info("No 'Pending' entries found. Everything is currently invoiced!")
     else:
         st.warning("No entries found in the database.")
+
+with tab_clients:
+    # THIS IS WHERE YOU PASTE THE NEW CODE
+    st.header("Client Settings")
+    
+    # --- ADD NEW CLIENT FORM ---
+    with st.expander("➕ Add New Client"):
+        with st.form("new_client_form", clear_on_submit=True):
+            new_name = st.text_input("Client Name")
+            new_rate = st.number_input("Default Hourly Rate", min_value=0.0, value=50.0, step=5.0)
+            submit_client = st.form_submit_button("Add Client")
+            
+            if submit_client and new_name:
+                # Add to existing df_clients
+                new_c_row = pd.DataFrame([{"client_name": new_name, "hourly_rate": new_rate}])
+                df_clients = pd.concat([df_clients, new_c_row], ignore_index=True)
+                update_data(df_clients, "clients")
+                st.success(f"Added {new_name}!")
+                st.rerun()
+
+    st.divider()
+    
+    # --- EDIT/DELETE CLIENTS ---
+    st.subheader("Existing Clients")
+    edited_clients = st.data_editor(
+        df_clients, 
+        num_rows="dynamic", 
+        use_container_width=True,
+        column_config={
+            "hourly_rate": st.column_config.NumberColumn(format="$%.2f")
+        }
+    )
+    
+    if st.button("Save Changes to Client List"):
+        update_data(edited_clients, "clients")
+        st.success("Changes saved!")
+        st.rerun()
