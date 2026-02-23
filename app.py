@@ -20,19 +20,20 @@ authenticator = stauth.Authenticate(
     cookie_expiry_days=30
 )
 
-# In the new version, login only returns the status
+# Use the 'fields' argument to make sure the labels are clear
 authentication_status = authenticator.login(location="main")
 
-if authentication_status == False:
+if st.session_state.get("authentication_status"):
+    # If login is successful, we continue to the rest of the app
+    name = st.session_state["name"]
+    st.sidebar.success(f"Welcome, {name}")
+    authenticator.logout(location="sidebar")
+elif st.session_state.get("authentication_status") is False:
     st.error("Username/password is incorrect")
     st.stop()
-elif authentication_status == None:
+else:
     st.warning("Please enter your username and password")
     st.stop()
-
-# Get info from the authenticator object instead of the function return
-name = st.session_state["name"]
-username = st.session_state["username"]
 
 # --- IF WE GET HERE, THE USER IS LOGGED IN ---
 st.sidebar.success(f"Welcome, {name}")
