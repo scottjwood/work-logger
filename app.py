@@ -15,18 +15,22 @@ df = conn.read(ttl=0)
 with st.sidebar:
     st.header("Add New Entry")
     client = st.text_input("Client Name")
-    rate = st.number_input("Hourly Rate ($)", value=50.0)
+    rate = st.number_input("Hourly Rate ($)", value=50.0, step=5.0)
     date = st.date_input("Date", datetime.now())
     
     col1, col2 = st.columns(2)
     start = col1.time_input("Start", time(9, 0)) 
     end = col2.time_input("End", time(17, 0))
     
-    lunch = st.number_input("Lunch (mins)", value=30)
+    # --- The AM/PM Preview is back! ---
+    st.caption(f"Saving as: **{start.strftime('%I:%M %p')}** to **{end.strftime('%I:%M %p')}**")
+    
+    lunch = st.number_input("Lunch (mins)", value=30, step=5)
     notes = st.text_area("Notes")
 
     if st.button("Save to Sheets"):
         if client:
+            # Formatting for the sheet
             new_row = {
                 "date": date.strftime("%Y-%m-%d"),
                 "client_name": client,
@@ -37,10 +41,10 @@ with st.sidebar:
                 "billing_rate": float(rate),
                 "status": "Pending"
             }
-            # Add new row to existing data
+            # Append and update
             df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
             conn.update(data=df)
-            st.success("Saved!")
+            st.success(f"Saved {client} entry!")
             st.rerun()
         else:
             st.error("Client name required")
