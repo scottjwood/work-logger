@@ -37,6 +37,9 @@ name = "Admin"
 df_entries = get_data("entries")
 df_clients = get_data("clients")
 
+# This cleans the "nan" out of the entire app's memory for the current session
+df_entries['notes'] = df_entries['notes'].fillna('')
+
 # --- SIDEBAR: INPUT ---
 with st.sidebar:
     st.title("Work Logger")
