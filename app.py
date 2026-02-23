@@ -120,8 +120,6 @@ with tab_manage:
 
 with tab_report:
     st.header("Monthly Reporting")
-    # (Keep your existing tab_report logic here, but make sure the button update matches below)
-    # Inside your 'if st.button("Mark All as Invoiced")' block, use this:
     if not df_entries.empty:
         pending_df = df_entries[df_entries['status'] == 'Pending']
         if not pending_df.empty:
@@ -129,19 +127,50 @@ with tab_report:
             selected_report_client = st.selectbox("Select Client for Report", [""] + list(clients_in_pending), key="report_select")
             
             if selected_report_client:
-                # ... [Keep your existing calculation logic here] ...
+                # 1. Filter data for the specific client
+                report_df = pending_df[pending_df['client_name'] == selected_report_client].copy()
                 
-                if st.button("Mark All as Invoiced"):
-                    # Record TODAY'S date as the invoice date
+                # 2. Calculate hours using your logic function
+                report_df['hrs'] = report_df.apply(
+                    lambda x: calculate_billable_hours(x['start_time'], x['end_time'], x['lunch_mins']), 
+                    axis=1
+                )
+                
+                # 3. Sum everything up
+                total_hrs = report_df['hrs'].sum()
+                current_rate = report_df['billing_rate'].iloc[0]
+                total_cash = total_hrs * current_rate
+                
+                # 4. Display Metrics
+                c1, c2 = st.columns(2)
+                c1.metric("Total Hours", f"{total_hrs} hrs")
+                c2.metric("Total Billable", f"${total_cash:,.2f}")
+                
+                # 5. Generate the Wave/Invoice text block
+                invoice_text = f"INVOICE SUMMARY: {selected_report_client}\n" + "-"*30 + "\n"
+                for _, row in report_df.iterrows():
+                    invoice_text += f"{row['date']} | {row['start_time']}-{row['end_time']} | {row['notes']}\n"
+                
+                st.text_area("Wave Description (Copy/Paste)", value=invoice_text, height=200)
+                
+                # 6. The "Mark as Invoiced" Button with Timestamp
+                if st.button("Mark All as Invoiced", use_container_width=True):
                     today_str = datetime.now().strftime("%Y-%m-%d")
                     
-                    # Update status AND add the timestamp
-                    df_entries.loc[(df_entries['client_name'] == selected_report_client) & (df_entries['status'] == 'Pending'), 'invoiced_date'] = today_str
-                    df_entries.loc[(df_entries['client_name'] == selected_report_client) & (df_entries['status'] == 'Pending'), 'status'] = 'Invoiced'
+                    # Target only this client's pending entries
+                    mask = (df_entries['client_name'] == selected_report_client) & (df_entries['status'] == 'Pending')
+                    
+                    # Apply updates
+                    df_entries.loc[mask, 'invoiced_date'] = today_str
+                    df_entries.loc[mask, 'status'] = 'Invoiced'
                     
                     update_data(df_entries, "entries")
-                    st.success(f"Invoiced on {today_str}!")
+                    st.success(f"Success! {selected_report_client} marked as invoiced on {today_str}.")
                     st.rerun()
+        else:
+            st.info("No 'Pending' entries found to report.")
+    else:
+        st.warning("No entries found in database.")
 
 with tab_history:
     st.header("Invoiced History")
@@ -168,7 +197,7 @@ with tab_history:
         st.dataframe(invoiced_df, use_container_width=True)
     else:
         st.info("No invoice history found yet.")
-        
+
 with tab_clients:
     st.header("Client Settings")
     with st.expander("➕ Add New Client"):
