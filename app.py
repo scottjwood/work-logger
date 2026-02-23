@@ -81,8 +81,8 @@ df = run_query("SELECT * FROM entries WHERE status = 'Pending'")
 
 if not df.empty:
     # Convert times to calculation-friendly format
-    df['Start'] = pd.to_datetime(df['start_time'], format='%H:%M').dt.time
-    df['End'] = pd.to_datetime(df['end_time'], format='%H:%M').dt.time
+    df['Start'] = pd.to_datetime(df['start_time'], format='mixed').dt.time
+    df['End'] = pd.to_datetime(df['end_time'], format='mixed').dt.time
     
     # Show the table
     st.dataframe(df[['date', 'client_name', 'start_time', 'end_time', 'lunch_mins', 'notes']], use_container_width=True)
