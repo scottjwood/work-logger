@@ -82,51 +82,93 @@ with st.sidebar:
         st.rerun()
 
 # --- MAIN AREA ---
-tab_manage, tab_report, tab_clients = st.tabs(["📋 Manage Entries", "📊 Reporting", "🏢 Client Management"])
+tab_manage, tab_report, tab_history, tab_clients = st.tabs([
+    "📋 Manage Pending", 
+    "📊 Generate Report", 
+    "📜 History",
+    "🏢 Client Management"
+])
 
 with tab_manage:
-    st.subheader("Time Entries")
-    edited_entries = st.data_editor(df_entries, num_rows="dynamic", use_container_width=True)
-    if st.button("Save Entry Changes"):
-        update_data(edited_entries, "entries")
-        st.rerun()
+    st.subheader("Filter Pending Entries")
+    
+    # Client Filter for the Table
+    if not df_clients.empty:
+        manage_client_list = ["All Clients"] + df_clients['client_name'].tolist()
+        filter_client = st.selectbox("View Pending for:", manage_client_list, key="manage_filter")
+        
+        # Filter Logic
+        pending_mask = df_entries['status'] == 'Pending'
+        if filter_client != "All Clients":
+            display_df = df_entries[pending_mask & (df_entries['client_name'] == filter_client)]
+        else:
+            display_df = df_entries[pending_mask]
+            
+        st.write(f"Showing **{len(display_df)}** pending entries.")
+        
+        # Data Editor
+        edited_entries = st.data_editor(display_df, num_rows="dynamic", use_container_width=True, key="pending_editor")
+        
+        if st.button("Save Changes to Pending"):
+            # This updates the original df_entries with changes from the edited subset
+            df_entries.update(edited_entries)
+            update_data(df_entries, "entries")
+            st.success("Changes saved!")
+            st.rerun()
+    else:
+        st.info("Add clients to start managing entries.")
 
 with tab_report:
     st.header("Monthly Reporting")
+    # (Keep your existing tab_report logic here, but make sure the button update matches below)
+    # Inside your 'if st.button("Mark All as Invoiced")' block, use this:
     if not df_entries.empty:
         pending_df = df_entries[df_entries['status'] == 'Pending']
         if not pending_df.empty:
             clients_in_pending = pending_df['client_name'].unique()
-            selected_report_client = st.selectbox("Select Client for Report", [""] + list(clients_in_pending))
+            selected_report_client = st.selectbox("Select Client for Report", [""] + list(clients_in_pending), key="report_select")
+            
             if selected_report_client:
-                report_df = pending_df[pending_df['client_name'] == selected_report_client].copy()
-                report_df['hrs'] = report_df.apply(
-                    lambda x: calculate_billable_hours(x['start_time'], x['end_time'], x['lunch_mins']), 
-                    axis=1
-                )
-                total_hrs = report_df['hrs'].sum()
-                current_rate = report_df['billing_rate'].iloc[0]
-                total_cash = total_hrs * current_rate
+                # ... [Keep your existing calculation logic here] ...
                 
-                c1, c2 = st.columns(2)
-                c1.metric("Total Hours", f"{total_hrs} hrs")
-                c2.metric("Total Billable", f"${total_cash:,.2f}")
-                
-                invoice_text = f"INVOICE SUMMARY: {selected_report_client}\n" + "-"*30 + "\n"
-                for _, row in report_df.iterrows():
-                    invoice_text += f"{row['date']} | {row['start_time']}-{row['end_time']} | {row['notes']}\n"
-                
-                st.text_area("Wave Description (Copy/Paste)", value=invoice_text, height=200)
                 if st.button("Mark All as Invoiced"):
-                    df_entries.loc[df_entries['client_name'] == selected_report_client, 'status'] = 'Invoiced'
+                    # Record TODAY'S date as the invoice date
+                    today_str = datetime.now().strftime("%Y-%m-%d")
+                    
+                    # Update status AND add the timestamp
+                    df_entries.loc[(df_entries['client_name'] == selected_report_client) & (df_entries['status'] == 'Pending'), 'invoiced_date'] = today_str
+                    df_entries.loc[(df_entries['client_name'] == selected_report_client) & (df_entries['status'] == 'Pending'), 'status'] = 'Invoiced'
+                    
                     update_data(df_entries, "entries")
-                    st.success(f"Updated {selected_report_client} entries!")
+                    st.success(f"Invoiced on {today_str}!")
                     st.rerun()
-        else:
-            st.info("No 'Pending' entries found.")
-    else:
-        st.warning("No entries found.")
 
+with tab_history:
+    st.header("Invoiced History")
+    invoiced_df = df_entries[df_entries['status'] == 'Invoiced']
+    
+    if not invoiced_df.empty:
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            h_client = st.selectbox("Select Client", ["All"] + list(invoiced_df['client_name'].unique()), key="h_client")
+        
+        # Filter by client first to get relevant dates
+        if h_client != "All":
+            invoiced_df = invoiced_df[invoiced_df['client_name'] == h_client]
+            
+        with col2:
+            # Dropdown for specific invoice dates
+            available_dates = ["All Dates"] + sorted(invoiced_df['invoiced_date'].dropna().unique().tolist(), reverse=True)
+            h_date = st.selectbox("Select Invoice Date", available_dates, key="h_date")
+            
+        if h_date != "All Dates":
+            invoiced_df = invoiced_df[invoiced_df['invoiced_date'] == h_date]
+            
+        st.dataframe(invoiced_df, use_container_width=True)
+    else:
+        st.info("No invoice history found yet.")
+        
 with tab_clients:
     st.header("Client Settings")
     with st.expander("➕ Add New Client"):
