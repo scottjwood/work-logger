@@ -1,0 +1,14 @@
+# Python virtual environment
+venv/
+.venv/
+env/
+
+# Database file (keep your data off the web!)
+*.db
+
+# Windows system files
+Thumbs.db
+desktop.ini
+
+# Mac system files
+.DS_Store
