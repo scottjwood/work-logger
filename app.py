@@ -9,20 +9,19 @@ import streamlit_authenticator as stauth
 st.set_page_config(page_title="Work Logger Pro", layout="wide")
 
 # --- SIMPLE SECURE LOGIN ---
-# This uses names and passwords you set in your Streamlit Secrets
 names = ["Admin"]
 usernames = ["admin"]
-# You'll put the hashed password in your secrets
 passwords = [st.secrets["password"]] 
 
 authenticator = stauth.Authenticate(
     {"usernames": {usernames[0]: {"name": names[0], "password": passwords[0]}}},
     "work_logger_cookie",
     "signature_key",
-    cookie_expiry_days=60
+    cookie_expiry_days=30
 )
 
-name, authentication_status, username = authenticator.login(location="main")
+# In the new version, login only returns the status
+authentication_status = authenticator.login(location="main")
 
 if authentication_status == False:
     st.error("Username/password is incorrect")
@@ -30,6 +29,10 @@ if authentication_status == False:
 elif authentication_status == None:
     st.warning("Please enter your username and password")
     st.stop()
+
+# Get info from the authenticator object instead of the function return
+name = st.session_state["name"]
+username = st.session_state["username"]
 
 # --- IF WE GET HERE, THE USER IS LOGGED IN ---
 st.sidebar.success(f"Welcome, {name}")
