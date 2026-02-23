@@ -110,8 +110,8 @@ with tab_manage:
         edited_entries = st.data_editor(display_df, num_rows="dynamic", use_container_width=True, key="pending_editor")
         
         if st.button("Save Changes to Pending"):
-            # This updates the original df_entries with changes from the edited subset
-            df_entries.update(edited_entries)
+            # Target only the rows that were visible in the editor
+            df_entries.loc[display_df.index, :] = edited_entries
             update_data(df_entries, "entries")
             st.success("Changes saved!")
             st.rerun()
@@ -141,10 +141,11 @@ with tab_report:
                 current_rate = report_df['billing_rate'].iloc[0]
                 total_cash = total_hrs * current_rate
                 
-                # 4. Display Metrics
+                # 4. Display Metrics (Enhanced)
                 c1, c2 = st.columns(2)
                 c1.metric("Total Hours", f"{total_hrs} hrs")
-                c2.metric("Total Billable", f"${total_cash:,.2f}")
+                # The 'delta' adds your hourly rate as a sub-label for a cleaner look
+                c2.metric("Billable Amount", f"${total_cash:,.2f}", delta=f"Rate: ${current_rate}/hr", delta_color="normal")
                 
                 # 5. Generate the Wave/Invoice text block
                 invoice_text = f"INVOICE SUMMARY: {selected_report_client}\n"
@@ -194,20 +195,24 @@ with tab_history:
             h_client = st.selectbox("Select Client", ["All"] + list(invoiced_df['client_name'].unique()), key="h_client")
         
         # Filter by client first to get relevant dates
+        current_h_df = invoiced_df.copy()
         if h_client != "All":
-            invoiced_df = invoiced_df[invoiced_df['client_name'] == h_client]
+            current_h_df = current_h_df[current_h_df['client_name'] == h_client]
             
         with col2:
-            # Dropdown for specific invoice dates
-            available_dates = ["All Dates"] + sorted(invoiced_df['invoiced_date'].dropna().unique().tolist(), reverse=True)
+            # Dropdown for specific invoice dates (only if the client actually has history)
+            if not current_h_df.empty and 'invoiced_date' in current_h_df.columns:
+                available_dates = ["All Dates"] + sorted(current_h_df['invoiced_date'].dropna().unique().tolist(), reverse=True)
+            else:
+                available_dates = ["All Dates"]
             h_date = st.selectbox("Select Invoice Date", available_dates, key="h_date")
             
         if h_date != "All Dates":
-            invoiced_df = invoiced_df[invoiced_df['invoiced_date'] == h_date]
+            current_h_df = current_h_df[current_h_df['invoiced_date'] == h_date]
             
-        st.dataframe(invoiced_df, use_container_width=True)
+        st.dataframe(current_h_df, use_container_width=True)
     else:
-        st.info("No invoice history found yet.")
+        st.info("No invoice history found yet. Once you mark entries as 'Invoiced' in the Report tab, they will appear here.")
 
 with tab_clients:
     st.header("Client Settings")
