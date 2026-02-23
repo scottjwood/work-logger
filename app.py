@@ -59,7 +59,19 @@ with st.sidebar:
         st.warning("Please add a client in the Management tab first.")
         selected_client = None
 
-    date = st.date_input("Date", datetime.now(), format="MM-DD-YYYY")
+    # 1. Quick Date Selector
+    date_choice = st.radio("Quick Date", ["Today", "Yesterday", "Custom"], horizontal=True)
+    
+    if date_choice == "Today":
+        selected_date = datetime.now()
+    elif date_choice == "Yesterday":
+        selected_date = datetime.now() - pd.Timedelta(days=1)
+    else:
+        selected_date = datetime.now()
+
+    # 2. The Calendar Picker
+    # If "Custom" is picked, you can change this; otherwise, it shows the quick choice
+    date = st.date_input("Date", value=selected_date, format="MM-DD-YYYY")
     col1, col2 = st.columns(2)
     start = col1.time_input("Start", time(9, 0)) 
     end = col2.time_input("End", time(17, 0))
