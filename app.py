@@ -3,36 +3,35 @@ import pandas as pd
 from datetime import datetime, time
 from database import get_data, update_data
 from logic import calculate_billable_hours
-import streamlit_authenticator as stauth
 
 # 1. MUST be the first Streamlit command
 st.set_page_config(page_title="Work Logger Pro", layout="wide")
 
-# --- SIMPLE LOGIN SECTION ---
-st.sidebar.title("🔐 Access Control")
+# --- LOGIN SESSION STATE ---
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
 
-# 1. Create text inputs in the sidebar
-user_input = st.sidebar.text_input("Username")
-pw_input = st.sidebar.text_input("Password", type="password")
-
-# 2. Check credentials (using '9900' as plain text in your Secrets)
-if user_input == "admin" and pw_input == st.secrets["password"]:
-    st.sidebar.success("Logged In!")
-    # Define 'name' here so the app can use it later
-    name = "Admin" 
-else:
-    # If they haven't typed anything yet, show a friendly warning
-    if not user_input or not pw_input:
-        st.warning("Please enter your credentials in the sidebar to unlock the tracker.")
-    else:
-        # If they typed the wrong thing, show an error
-        st.sidebar.error("Incorrect Username or Password")
+# --- MAIN PAGE LOGIN SCREEN ---
+if not st.session_state.authenticated:
+    st.title("🔐 Work Logger Pro")
+    st.markdown("### Design Portal Login")
     
-    # This stops the app from running the rest of the code until login is correct
-    st.stop()
+    # Center the login form
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        user_input = st.text_input("Username")
+        pw_input = st.text_input("Password", type="password")
+        if st.button("Login", use_container_width=True):
+            if user_input == "admin" and pw_input == st.secrets["password"]:
+                st.session_state.authenticated = True
+                st.rerun()
+            else:
+                st.error("Incorrect Username or Password")
+    
+    st.stop() # This prevents the rest of the app from loading until logged in
 
-# --- IF WE GET HERE, THE USER IS AUTHENTICATED ---
-st.sidebar.write(f"Welcome back, {name}!")
+# --- IF WE GET HERE, THE USER IS LOGGED IN ---
+name = "Admin"
 
 # Fetch both sheets
 df_entries = get_data("entries")
@@ -40,7 +39,13 @@ df_clients = get_data("clients")
 
 # --- SIDEBAR: INPUT ---
 with st.sidebar:
-    st.success(f"Hello, {name}!")
+    st.title("Work Logger")
+    st.write(f"Logged in as: **{name}**")
+    if st.button("Logout"):
+        st.session_state.authenticated = False
+        st.rerun()
+        
+    st.divider()
     st.header("Add New Entry")
     
     if not df_clients.empty:
@@ -60,7 +65,7 @@ with st.sidebar:
     lunch = st.number_input("Lunch (mins)", value=30, step=5)
     notes = st.text_area("Notes")
 
-    if st.button("Save Entry") and selected_client:
+    if st.button("Save Entry", use_container_width=True) and selected_client:
         new_row = {
             "date": date.strftime("%Y-%m-%d"),
             "client_name": selected_client,
@@ -102,12 +107,15 @@ with tab_report:
                 total_hrs = report_df['hrs'].sum()
                 current_rate = report_df['billing_rate'].iloc[0]
                 total_cash = total_hrs * current_rate
+                
                 c1, c2 = st.columns(2)
                 c1.metric("Total Hours", f"{total_hrs} hrs")
                 c2.metric("Total Billable", f"${total_cash:,.2f}")
+                
                 invoice_text = f"INVOICE SUMMARY: {selected_report_client}\n" + "-"*30 + "\n"
                 for _, row in report_df.iterrows():
                     invoice_text += f"{row['date']} | {row['start_time']}-{row['end_time']} | {row['notes']}\n"
+                
                 st.text_area("Wave Description (Copy/Paste)", value=invoice_text, height=200)
                 if st.button("Mark All as Invoiced"):
                     df_entries.loc[df_entries['client_name'] == selected_report_client, 'status'] = 'Invoiced'
