@@ -23,7 +23,7 @@ authenticator = stauth.Authenticate(
     credentials,
     "work_logger_cookie",
     "signature_key",
-    cookie_expiry_days=30
+    cookie_expiry_days=60
 )
 
 # Render the login widget
