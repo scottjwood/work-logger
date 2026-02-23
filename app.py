@@ -158,7 +158,7 @@ with tab_report:
                     # 2. Clean up the note (if it's empty/NaN, make it an empty string)
                     # This check handles both 'nan' strings and actual null values
                     note_content = str(row['notes']) if pd.notnull(row['notes']) else ""
-                    invoice_text += f"{row['date']} | {row_hrs} hrs | {row['note_content']}\n"
+                    invoice_text += f"{row['date']} | {row_hrs} hrs | {note_content}\n"
                 
                 invoice_text += "-"*30 + "\n"
                 invoice_text += f"GRAND TOTAL: {total_hrs} hrs"
