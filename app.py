@@ -33,7 +33,7 @@ elif authentication_status == None:
 
 # --- IF WE GET HERE, THE USER IS LOGGED IN ---
 st.sidebar.success(f"Welcome, {name}")
-authenticator.logout("Logout", "sidebar")
+authenticator.logout(location="sidebar")
 
 # Fetch both sheets
 df_entries = get_data("entries")
