@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime, time
 from database import get_data, update_data
 from logic import calculate_billable_hours
-from streamlit_google_oauth import login
+from st_google_oauth import login
 
 # 1. MUST be the first Streamlit command
 st.set_page_config(page_title="Work Logger Pro", layout="wide")
