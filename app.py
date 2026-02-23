@@ -16,7 +16,6 @@ if not st.session_state.authenticated:
     st.title("🔐 Work Logger Pro")
     st.markdown("### Design Portal Login")
     
-    # Center the login form
     col1, col2 = st.columns([1, 1])
     with col1:
         user_input = st.text_input("Username")
@@ -27,17 +26,16 @@ if not st.session_state.authenticated:
                 st.rerun()
             else:
                 st.error("Incorrect Username or Password")
-    
-    st.stop() # This prevents the rest of the app from loading until logged in
+    st.stop()
 
 # --- IF WE GET HERE, THE USER IS LOGGED IN ---
 name = "Admin"
 
-# Fetch both sheets
+# Fetch data
 df_entries = get_data("entries")
 df_clients = get_data("clients")
 
-# This cleans the "nan" out of the entire app's memory for the current session
+# Global Cleanups
 df_entries['notes'] = df_entries['notes'].fillna('')
 
 # --- SIDEBAR: INPUT ---
@@ -70,7 +68,7 @@ with st.sidebar:
 
     if st.button("Save Entry", use_container_width=True) and selected_client:
         new_row = {
-            "date": date.strftime("%Y-%m-%d"),
+            "date": date.strftime("%m-%d-%Y"), # YOUR NEW FORMAT
             "client_name": selected_client,
             "start_time": start.strftime("%I:%M %p"),
             "end_time": end.strftime("%I:%M %p"),
@@ -94,13 +92,10 @@ tab_manage, tab_report, tab_history, tab_clients = st.tabs([
 
 with tab_manage:
     st.subheader("Filter Pending Entries")
-    
-    # Client Filter for the Table
     if not df_clients.empty:
         manage_client_list = ["All Clients"] + df_clients['client_name'].tolist()
         filter_client = st.selectbox("View Pending for:", manage_client_list, key="manage_filter")
         
-        # Filter Logic
         pending_mask = df_entries['status'] == 'Pending'
         if filter_client != "All Clients":
             display_df = df_entries[pending_mask & (df_entries['client_name'] == filter_client)]
@@ -108,12 +103,9 @@ with tab_manage:
             display_df = df_entries[pending_mask]
             
         st.write(f"Showing **{len(display_df)}** pending entries.")
-        
-        # Data Editor
         edited_entries = st.data_editor(display_df, num_rows="dynamic", use_container_width=True, key="pending_editor")
         
         if st.button("Save Changes to Pending"):
-            # Target only the rows that were visible in the editor
             df_entries.loc[display_df.index, :] = edited_entries
             update_data(df_entries, "entries")
             st.success("Changes saved!")
@@ -130,58 +122,44 @@ with tab_report:
             selected_report_client = st.selectbox("Select Client for Report", [""] + list(clients_in_pending), key="report_select")
             
             if selected_report_client:
-                # 1. Filter data for the specific client
                 report_df = pending_df[pending_df['client_name'] == selected_report_client].copy()
-                
-                # 2. Calculate hours using your logic function
                 report_df['hrs'] = report_df.apply(
                     lambda x: calculate_billable_hours(x['start_time'], x['end_time'], x['lunch_mins']), 
                     axis=1
                 )
                 
-                # 3. Sum everything up
                 total_hrs = report_df['hrs'].sum()
                 current_rate = report_df['billing_rate'].iloc[0]
                 total_cash = total_hrs * current_rate
                 
-                # 4. Display Metrics (Enhanced)
                 c1, c2 = st.columns(2)
                 c1.metric("Total Hours", f"{total_hrs} hrs")
-                # The 'delta' adds your hourly rate as a sub-label for a cleaner look
                 c2.metric("Billable Amount", f"${total_cash:,.2f}", delta=f"Rate: ${current_rate}/hr", delta_color="normal")
                 
-                # 5. Generate the Wave/Invoice text block
+                # DATE RANGE LOGIC FOR MM-DD-YYYY
+                temp_dates = pd.to_datetime(report_df['date'], format='%m-%d-%Y')
+                
                 invoice_text = f"INVOICE SUMMARY: {selected_report_client}\n"
+                invoice_text += f"Period: {temp_dates.min().strftime('%m-%d-%Y')} to {temp_dates.max().strftime('%m-%d-%Y')}\n"
                 invoice_text += f"Total Hours: {total_hrs} | Rate: {current_rate} | Total Amount: ${total_cash:,.2f}\n"
                 invoice_text += "-"*30 + "\n"
                 
                 for _, row in report_df.iterrows():
-                    # Calculate hours for each specific row for detail
                     row_hrs = calculate_billable_hours(row['start_time'], row['end_time'], row['lunch_mins'])
-                    # 2. Clean up the note (if it's empty/NaN, make it an empty string)
-                    # This check handles both 'nan' strings and actual null values
-                    note_content = str(row['notes']) if pd.notnull(row['notes']) else ""
+                    note_content = str(row['notes']) if row['notes'] != "" else ""
                     invoice_text += f"{row['date']} | {row_hrs} hrs | {note_content}\n"
                 
                 invoice_text += "-"*30 + "\n"
                 invoice_text += f"GRAND TOTAL: {total_hrs} hrs"
 
                 st.text_area("Wave Description (Copy/Paste)", value=invoice_text, height=250)
-
-                # Direct link to Wave to save clicks
                 st.link_button("Go to Wave Invoices ↗️", "https://next.waveapps.com/e9bfc2ca-dac3-48a0-83b0-d66a9fadc43a/invoices")
 
-                # 6. The "Mark as Invoiced" Button with Timestamp
                 if st.button("Mark All as Invoiced", use_container_width=True):
-                    today_str = datetime.now().strftime("%Y-%m-%d")
-                    
-                    # Target only this client's pending entries
+                    today_str = datetime.now().strftime("%m-%d-%Y") # CONSISTENT FORMAT
                     mask = (df_entries['client_name'] == selected_report_client) & (df_entries['status'] == 'Pending')
-                    
-                    # Apply updates
                     df_entries.loc[mask, 'invoiced_date'] = today_str
                     df_entries.loc[mask, 'status'] = 'Invoiced'
-                    
                     update_data(df_entries, "entries")
                     st.success(f"Success! {selected_report_client} marked as invoiced on {today_str}.")
                     st.rerun()
@@ -196,19 +174,19 @@ with tab_history:
     
     if not invoiced_df.empty:
         col1, col2 = st.columns(2)
-        
         with col1:
             h_client = st.selectbox("Select Client", ["All"] + list(invoiced_df['client_name'].unique()), key="h_client")
         
-        # Filter by client first to get relevant dates
         current_h_df = invoiced_df.copy()
         if h_client != "All":
             current_h_df = current_h_df[current_h_df['client_name'] == h_client]
             
         with col2:
-            # Dropdown for specific invoice dates (only if the client actually has history)
+            # CHRONOLOGICAL SORTING FOR MM-DD-YYYY
             if not current_h_df.empty and 'invoiced_date' in current_h_df.columns:
-                available_dates = ["All Dates"] + sorted(current_h_df['invoiced_date'].dropna().unique().tolist(), reverse=True)
+                real_dates = pd.to_datetime(current_h_df['invoiced_date'], format='%m-%d-%Y', errors='coerce')
+                sorted_unique = sorted(real_dates.dropna().unique(), reverse=True)
+                available_dates = ["All Dates"] + [d.strftime('%m-%d-%Y') for d in sorted_unique]
             else:
                 available_dates = ["All Dates"]
             h_date = st.selectbox("Select Invoice Date", available_dates, key="h_date")
@@ -218,7 +196,7 @@ with tab_history:
             
         st.dataframe(current_h_df, use_container_width=True)
     else:
-        st.info("No invoice history found yet. Once you mark entries as 'Invoiced' in the Report tab, they will appear here.")
+        st.info("No invoice history found yet.")
 
 with tab_clients:
     st.header("Client Settings")
