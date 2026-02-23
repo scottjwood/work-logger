@@ -147,12 +147,19 @@ with tab_report:
                 c2.metric("Total Billable", f"${total_cash:,.2f}")
                 
                 # 5. Generate the Wave/Invoice text block
-                invoice_text = f"INVOICE SUMMARY: {selected_report_client}\n" + "-"*30 + "\n"
+                invoice_text = f"INVOICE SUMMARY: {selected_report_client}\n"
+                invoice_text += f"Total Hours: {total_hrs} | Total Amount: ${total_cash:,.2f}\n"
+                invoice_text += "-"*30 + "\n"
+                
                 for _, row in report_df.iterrows():
-                    invoice_text += f"{row['date']} | {row['start_time']}-{row['end_time']} | {row['notes']}\n"
+                    # Calculate hours for each specific row for detail
+                    row_hrs = calculate_billable_hours(row['start_time'], row['end_time'], row['lunch_mins'])
+                    invoice_text += f"{row['date']} | {row_hrs} hrs | {row['notes']}\n"
                 
-                st.text_area("Wave Description (Copy/Paste)", value=invoice_text, height=200)
-                
+                invoice_text += "-"*30 + "\n"
+                invoice_text += f"GRAND TOTAL: {total_hrs} hrs"
+
+                st.text_area("Wave Description (Copy/Paste)", value=invoice_text, height=250)
                 # 6. The "Mark as Invoiced" Button with Timestamp
                 if st.button("Mark All as Invoiced", use_container_width=True):
                     today_str = datetime.now().strftime("%Y-%m-%d")
