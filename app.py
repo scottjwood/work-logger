@@ -46,25 +46,30 @@ st.title("⏱️ My Work Logger")
 with st.sidebar:
     st.header("Add New Entry")
     client = st.text_input("Client Name")
-    billing_rate = st.number_input("Hourly Rate ($)", value=50.0, step=5.0) # Added Rate
+    billing_rate = st.number_input("Hourly Rate ($)", value=50.0, step=5.0)
     date = st.date_input("Date", datetime.now())
     
     col1, col2 = st.columns(2)
-    # Streamlit time_input shows AM/PM by default based on your browser locale!
     start = col1.time_input("Start", time(9, 0)) 
     end = col2.time_input("End", time(17, 0))
+    
+    # --- ADD THIS: Live Preview of the 12-hour time ---
+    st.caption(f"Saving as: {start.strftime('%I:%M %p')} to {end.strftime('%I:%M %p')}")
     
     lunch = st.number_input("Lunch (minutes)", value=30, step=5)
     notes = st.text_area("Notes/Tasks")
 
     if st.button("Save Entry"):
         if client:
+            # We ensure the string saved to the DB is 12-hour format
+            start_str = start.strftime("%I:%M %p")
+            end_str = end.strftime("%I:%M %p")
+            
             execute_db('''
                 INSERT INTO entries (date, client_name, start_time, end_time, lunch_mins, notes, billing_rate)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (date.strftime("%Y-%m-%d"), client, start.strftime("%I:%M %p"), # Saves as "08:00 AM"
-                  end.strftime("%I:%M %p"), lunch, notes, billing_rate))
-            st.success("Entry Saved!")
+            ''', (date.strftime("%Y-%m-%d"), client, start_str, end_str, lunch, notes, billing_rate))
+            st.success(f"Saved: {start_str} - {end_str}")
         else:
             st.error("Please enter a client name.")
 
