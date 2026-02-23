@@ -40,7 +40,7 @@ df_clients = get_data("clients")
 
 # --- SIDEBAR: INPUT ---
 with st.sidebar:
-    st.success(f"Hello, {user_name}!")
+    st.success(f"Hello, {name}!")
     st.header("Add New Entry")
     
     if not df_clients.empty:
