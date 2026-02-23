@@ -149,7 +149,7 @@ with tab_report:
                 
                 # 5. Generate the Wave/Invoice text block
                 invoice_text = f"INVOICE SUMMARY: {selected_report_client}\n"
-                invoice_text += f"Total Hours: {total_hrs} | Rate: {current_rate}| Total Amount: ${total_cash:,.2f}\n"
+                invoice_text += f"Total Hours: {total_hrs} | Rate: {current_rate} | Total Amount: ${total_cash:,.2f}\n"
                 invoice_text += "-"*30 + "\n"
                 
                 for _, row in report_df.iterrows():
