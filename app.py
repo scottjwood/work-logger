@@ -162,7 +162,7 @@ with tab_report:
                 st.text_area("Wave Description (Copy/Paste)", value=invoice_text, height=250)
 
                 # Direct link to Wave to save clicks
-                st.link_button("Go to Wave Invoices ↗️", "https://secure.waveapps.com/invoices/")
+                st.link_button("Go to Wave Invoices ↗️", "https://next.waveapps.com/e9bfc2ca-dac3-48a0-83b0-d66a9fadc43a/invoices")
 
                 # 6. The "Mark as Invoiced" Button with Timestamp
                 if st.button("Mark All as Invoiced", use_container_width=True):
