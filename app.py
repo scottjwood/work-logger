@@ -8,20 +8,29 @@ from logic import calculate_billable_hours
 st.set_page_config(page_title="Work Logger Pro", layout="wide")
 st.markdown("""
     <style>
-    /* Add a border and background to all selectboxes/dropdowns */
-    div[data-baseweb="select"] > div {
-        background-color: #f0f2f6; /* Light grey background */
-        border: 1px solid #d1d5db; /* Subtle border */
-        border-radius: 5px;
+    /* 1. Add a subtle border to all input widgets so they don't blend in */
+    div[data-baseweb="select"] > div, 
+    div[data-baseweb="input"] > div, 
+    div[data-baseweb="base-input"] > div {
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        transition: border-color 0.3s ease;
     }
-    
-    /* Make the input areas (notes, start/end) stand out too */
-    .stTextInput, .stTextArea, .stTimeInput {
-        border: 1px solid #d1d5db !important;
-        border-radius: 5px;
+
+    /* 2. Highlight the active field with a blue glow (Standard Wave-ish Blue) */
+    div[data-baseweb="select"] > div:focus-within, 
+    div[data-baseweb="input"]:focus-within,
+    div[data-baseweb="base-input"]:focus-within {
+        border-color: #3d8bff !important;
+        box-shadow: 0 0 0 1px #3d8bff !important;
+    }
+
+    /* 3. Make the Sidebar inputs slightly darker to distinguish from main area */
+    [data-testid="stSidebar"] div[data-baseweb="select"] > div {
+        background-color: #0e1117 !important;
     }
     </style>
     """, unsafe_allow_html=True)
+
 # --- LOGIN SESSION STATE ---
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
