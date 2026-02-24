@@ -18,14 +18,13 @@ if not st.session_state.authenticated:
     
     col1, col2 = st.columns([1, 1])
     with col1:
-        user_input = st.text_input("Username")
-        pw_input = st.text_input("Password", type="password")
-        if st.button("Login", use_container_width=True):
-            if user_input == "admin" and pw_input == st.secrets["password"]:
+        pw_input = st.text_input("Enter Access Key", type="password")
+        if st.button("Unlock Dashboard", use_container_width=True) or (pw_input and pw_input == st.secrets["password"]):
+            if pw_input == st.secrets["password"]:
                 st.session_state.authenticated = True
                 st.rerun()
-            else:
-                st.error("Incorrect Username or Password")
+            elif pw_input:
+                st.error("Incorrect Password")
     st.stop()
 
 # --- IF WE GET HERE, THE USER IS LOGGED IN ---
@@ -41,10 +40,10 @@ df_entries['notes'] = df_entries['notes'].fillna('')
 # --- SIDEBAR: INPUT ---
 with st.sidebar:
     st.title("Work Logger")
-    st.write(f"Logged in as: **{name}**")
-    if st.button("Logout"):
-        st.session_state.authenticated = False
-        st.rerun()
+    # st.write(f"Logged in as: **{name}**")
+    # if st.button("Logout"):
+    #     st.session_state.authenticated = False
+    #     st.rerun()
         
     st.divider()
     st.header("Add New Entry")
