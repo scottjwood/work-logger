@@ -33,19 +33,20 @@ name = "Admin"
 # Fetch data
 df_entries = get_data("entries")
 df_clients = get_data("clients")
+st.session_state["last_sync"] = datetime.now().strftime("%I:%M %p")
 
 # Global Cleanups
 df_entries['notes'] = df_entries['notes'].fillna('')
 
 # --- SIDEBAR: INPUT ---
 with st.sidebar:
-    st.title("Work Logger")
+    # st.title("Work Logger")
     # st.write(f"Logged in as: **{name}**")
     # if st.button("Logout"):
     #     st.session_state.authenticated = False
     #     st.rerun()
         
-    st.divider()
+    # st.divider()
     st.header("Add New Entry")
     
     if not df_clients.empty:
@@ -92,6 +93,10 @@ with st.sidebar:
         update_data(df_entries, "entries")
         st.success("Entry Saved!")
         st.rerun()
+
+    st.divider()
+    sync_time = st.session_state.get("last_sync", "Unknown")
+    st.caption(f"🟢 System Synced: {sync_time}")
 
 # --- MAIN AREA ---
 tab_manage, tab_report, tab_history, tab_clients = st.tabs([
