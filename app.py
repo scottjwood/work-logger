@@ -6,7 +6,22 @@ from logic import calculate_billable_hours
 
 # 1. MUST be the first Streamlit command
 st.set_page_config(page_title="Work Logger Pro", layout="wide")
-
+st.markdown("""
+    <style>
+    /* Add a border and background to all selectboxes/dropdowns */
+    div[data-baseweb="select"] > div {
+        background-color: #f0f2f6; /* Light grey background */
+        border: 1px solid #d1d5db; /* Subtle border */
+        border-radius: 5px;
+    }
+    
+    /* Make the input areas (notes, start/end) stand out too */
+    .stTextInput, .stTextArea, .stTimeInput {
+        border: 1px solid #d1d5db !important;
+        border-radius: 5px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 # --- LOGIN SESSION STATE ---
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
