@@ -64,11 +64,6 @@ df_entries['notes'] = df_entries['notes'].fillna('')
 
 # --- SIDEBAR: INPUT ---
 with st.sidebar:
-    # st.title("Work Logger")
-    # st.write(f"Logged in as: **{name}**")
-    # if st.button("Logout"):
-    #     st.session_state.authenticated = False
-    #     st.rerun()
         
     # st.divider()
     st.header("Add New Entry")
@@ -101,6 +96,27 @@ with st.sidebar:
     end = col2.time_input("End", time(17, 0))
     lunch = st.number_input("Lunch (mins)", value=30, step=5)
     notes = st.text_area("Notes")
+
+# --- LIVE SUMMARY PREVIEW ---
+    st.divider()
+    if selected_client:
+        # Calculate the live total
+        # We convert time objects to strings to reuse your logic function
+        start_str = start.strftime("%I:%M %p")
+        end_str = end.strftime("%I:%M %p")
+        
+        live_hrs = calculate_billable_hours(start_str, end_str, lunch)
+        live_total = live_hrs * current_rate
+        
+        # Display the Summary
+        st.markdown(f"### 🧾 Entry Preview")
+        st.markdown(f"**Time:** {start_str} – {end_str}")
+        
+        col_a, col_b = st.columns(2)
+        col_a.metric("Total Hrs", f"{live_hrs}h")
+        col_b.metric("Subtotal", f"${live_total:,.2f}")
+        
+    st.divider()
 
     if st.button("Save Entry", use_container_width=True) and selected_client:
         new_row = {
