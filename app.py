@@ -109,6 +109,7 @@ with st.sidebar:
         # Using Markdown for a much tighter, professional look
         st.markdown("#### 🧾 Entry Preview")
         st.write(f"**Window:** {start_str} – {end_str}")
+        st.write(f"**Lunch:** {lunch} mins")
         
         # Displaying hours and cash side-by-side without the "Huge" metric font
         st.markdown(f"**Billable:** `{live_hrs} hrs` | **Subtotal:** `${live_total:,.2f}`")
