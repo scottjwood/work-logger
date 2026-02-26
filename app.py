@@ -98,7 +98,6 @@ with st.sidebar:
     notes = st.text_area("Notes")
 
 # --- LIVE SUMMARY PREVIEW ---
-    st.divider()
     if selected_client:
         start_str = start.strftime("%I:%M %p")
         end_str = end.strftime("%I:%M %p")
@@ -114,10 +113,6 @@ with st.sidebar:
         # Displaying hours and cash side-by-side without the "Huge" metric font
         st.markdown(f"**Billable:** `{live_hrs} hrs` | **Subtotal:** `${live_total:,.2f}`")
         
-    st.divider()
-        
-    st.divider()
-
     if st.button("Save Entry", use_container_width=True) and selected_client:
         new_row = {
             "date": date.strftime("%m-%d-%Y"), # YOUR NEW FORMAT
