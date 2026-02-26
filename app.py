@@ -100,21 +100,20 @@ with st.sidebar:
 # --- LIVE SUMMARY PREVIEW ---
     st.divider()
     if selected_client:
-        # Calculate the live total
-        # We convert time objects to strings to reuse your logic function
         start_str = start.strftime("%I:%M %p")
         end_str = end.strftime("%I:%M %p")
         
         live_hrs = calculate_billable_hours(start_str, end_str, lunch)
         live_total = live_hrs * current_rate
         
-        # Display the Summary
-        st.markdown(f"### 🧾 Entry Preview")
-        st.markdown(f"**Time:** {start_str} – {end_str}")
+        # Using Markdown for a much tighter, professional look
+        st.markdown("#### 🧾 Entry Preview")
+        st.write(f"**Window:** {start_str} – {end_str}")
         
-        col_a, col_b = st.columns(2)
-        col_a.metric("Total Hrs", f"{live_hrs}h")
-        col_b.metric("Subtotal", f"${live_total:,.2f}")
+        # Displaying hours and cash side-by-side without the "Huge" metric font
+        st.markdown(f"**Billable:** `{live_hrs} hrs` | **Subtotal:** `${live_total:,.2f}`")
+        
+    st.divider()
         
     st.divider()
 
